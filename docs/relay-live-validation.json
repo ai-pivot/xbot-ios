@@ -1,0 +1,8 @@
+{
+  "server": "https://xbot.energylt.com",
+  "verified_at": "2026-10-21T04:00:34.054273+00:00",
+  "authenticated": true,
+  "session_tree": true,
+  "model_rpc": true,
+  "apns_sent": false
+}

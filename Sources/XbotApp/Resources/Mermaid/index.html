@@ -1,0 +1,33 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src data:; connect-src 'none'; frame-src 'none'">
+<style>html,body{margin:0;background:transparent;font-family:-apple-system,sans-serif}body{padding:8px;box-sizing:border-box}#diagram svg{max-width:100%;height:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}body.dark{color:#ddd}body.interactive{min-height:100vh;display:flex;align-items:center;justify-content:center}</style>
+<script src="mermaid.min.js"></script></head>
+<body><div id="diagram" role="img" aria-label="Mermaid 图表"></div>
+<script>
+let revision=0;
+window.renderDiagram=async function(code,dark,interactive){
+  const current=++revision, root=document.getElementById('diagram');
+  document.body.className=(dark?'dark ':'')+(interactive?'interactive':'');
+  root.replaceChildren();
+  try {
+    mermaid.initialize({startOnLoad:false,securityLevel:'strict',theme:dark?'dark':'default',suppressErrorRendering:true,flowchart:{htmlLabels:false}});
+    const output=await mermaid.render('xbot-diagram-'+current,code);
+    if(current!==revision)return;
+    root.innerHTML=output.svg;
+    report('');
+  }catch(error){
+    if(current!==revision)return;
+    const pre=document.createElement('pre');pre.textContent=code;root.replaceChildren(pre);
+    report('无法渲染图表，请检查 Mermaid 语法');
+  }
+};
+function report(error){
+  requestAnimationFrame(()=>{
+    const svg=document.querySelector('svg');
+    const height=svg?svg.getBoundingClientRect().height+16:document.body.scrollHeight;
+    window.webkit.messageHandlers.diagram.postMessage({height:height,error:error});
+  });
+}
+</script></body></html>

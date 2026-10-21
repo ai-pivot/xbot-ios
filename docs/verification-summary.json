@@ -1,0 +1,24 @@
+{
+  "verified_at": "2026-10-21T04:08:37.264959+00:00",
+  "android_reference": "761ec91893cedf94329c1e9de87d0743942c0692",
+  "core_tests": {
+    "passed": 35,
+    "failed": 0
+  },
+  "relay_tests": {
+    "passed": 10,
+    "failed": 0
+  },
+  "ui_flows": {
+    "passed": 5,
+    "failed": 0,
+    "skipped": 0
+  },
+  "settings_update_retest": "passed",
+  "native_live_steps": 10,
+  "native_live_passed": true,
+  "simulator_debug_build": "passed",
+  "iphoneos_release_unsigned_build": "passed",
+  "apns": "unconfigured_not_sent",
+  "testflight_appstore": "not_published"
+}

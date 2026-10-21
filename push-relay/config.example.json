@@ -1,0 +1,12 @@
+{
+  "server": "https://xbot.example.com",
+  "secret": "REPLACE_WITH_A_RANDOM_SECRET_OF_AT_LEAST_32_CHARACTERS",
+  "credentialsFile": "/private/xbot-push/xbot_user",
+  "stateFile": "/private/xbot-push/devices.json",
+  "teamId": "APPLE_TEAM_ID",
+  "keyId": "APNS_KEY_ID",
+  "apnsKeyFile": "/private/xbot-push/AuthKey.p8",
+  "topic": "dev.xbot.ios",
+  "sandbox": false,
+  "port": 18882
+}

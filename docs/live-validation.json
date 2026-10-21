@@ -1,0 +1,18 @@
+{
+  "failure_kind": "",
+  "cleanup_attempted": true,
+  "steps": [
+    "login",
+    "401_relogin",
+    "settings_read_write",
+    "session_create_rename",
+    "model_select",
+    "upload_download",
+    "message_sse_history",
+    "session_fork",
+    "cancel",
+    "rewind_draft"
+  ],
+  "passed": true,
+  "last_step": "rewind_draft"
+}
