@@ -146,7 +146,7 @@ final class NotificationController: NSObject, UNUserNotificationCenterDelegate {
         guard enabled && !foreground && !PushRelayController.shared.registered else { return }
         let content = UNMutableNotificationContent()
         content.title = notice.kind == .question ? "xbot 需要你的回答" : "xbot 已完成"
-        content.subtitle = chat.title; content.body = String(notice.body.prefix(240)); content.sound = .default
+        content.body = notice.kind == .question ? "打开 xbot 查看并回答。" : "打开 xbot 查看任务结果。"; content.sound = .default
         content.userInfo = ["chat_id": chat.chatID, "channel": chat.channel, "server": api?.baseURL.absoluteString ?? ""]
         let identity = snapshotKey + ":" + notice.kind.rawValue + ":" + key
         let id = SHA256.hash(data: Data(identity.utf8)).map { String(format: "%02x", $0) }.joined()

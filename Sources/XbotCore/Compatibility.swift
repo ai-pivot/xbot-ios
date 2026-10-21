@@ -22,10 +22,13 @@ public enum MediaURLResolver {
                       let origin = URLComponents(url: media, resolvingAgainstBaseURL: false) else { return nil }
                 url.scheme = origin.scheme; url.host = origin.host; url.port = origin.port
             }
-            return url.url
+            guard let result = url.url, (try? TransportSecurity.validate(result)) != nil else { return nil }
+            return result
         }
         guard !value.hasPrefix("//"), let server else { return nil }
-        return URL(string: server.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + (value.hasPrefix("/") ? "" : "/") + value)
+        guard let result = URL(string: server.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + (value.hasPrefix("/") ? "" : "/") + value),
+              (try? TransportSecurity.validate(result)) != nil else { return nil }
+        return result
     }
 }
 

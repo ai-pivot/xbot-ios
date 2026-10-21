@@ -11,7 +11,7 @@ export function makeProviderToken({ teamId, keyId, privateKey, now = Math.floor(
 
 export function notificationPayload(notice, context) {
   return {
-    aps: { alert: { title: notice.kind === 'question' ? 'xbot 需要你的回答' : 'xbot 已完成', body: [...notice.body].slice(0, 240).join('') }, sound: 'default' },
+    aps: { alert: { title: notice.kind === 'question' ? 'xbot 需要你的回答' : 'xbot 已完成', body: notice.kind === 'question' ? '打开 xbot 查看并回答。' : '打开 xbot 查看任务结果。' }, sound: 'default' },
     chat_id: context.chat_id, channel: context.channel, server: context.server,
   };
 }

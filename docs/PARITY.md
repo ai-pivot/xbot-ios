@@ -41,3 +41,7 @@
 Android：`data/XbotApi.kt`、`data/Models.kt`、`chat/ChatReducer.kt`、`ui/ChatScreen.kt`、`ui/SettingsViewModel.kt`、`ui/components/MarkdownText.kt`、`ui/components/MermaidView.kt`、`sessions/SessionsScreen.kt`、通知服务及更新模块。
 
 iOS：`XbotAPI.swift`、`ChatState.swift`、`SSEParser.swift`、`ChatStore.swift`、`ChatView.swift`、`SettingsView.swift`、`MarkdownParser.swift`、`MermaidView.swift`、`NotificationController.swift`、`PushRelayController.swift`、`UpdateSettingsView.swift`，以及 `push-relay/`。
+
+## 自托管隐私与提审加固
+
+保留上述功能，新增登录隐私说明、按服务器／账号隔离的 AI 分享确认与撤回、配置变更后的重新确认、本机会话屏蔽和恢复、内容举报及导出。原版服务器无需升级即可聊天；完整远端删除申请和私有举报受理可接入 `compliance-service/`，未接入时不会显示虚假的受理／完成结果。公网连接改为 HTTPS，保留明确局域网 HTTP；通知只显示通用提示。清除本机数据与远端账号删除是独立操作。

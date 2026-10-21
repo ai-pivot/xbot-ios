@@ -42,7 +42,13 @@ test('completion, AskUser and canceled event notification mapping', () => {
   assert.equal(noticeForEvent({ type: 'text_delta', content: 'partial' }), null);
   assert.equal(noticeForEvent({ type: 'ask_user', progress: { questions: [{ question: 'which?' }] } }).body, 'which?');
   assert.equal(noticeForEvent({ type: 'ask_user', content: JSON.stringify({ questions: JSON.stringify([{ question: 'legacy?' }]) }) }).body, 'legacy?');
-  assert.equal([...notificationPayload({ kind: 'completed', body: '😀'.repeat(300) }, registration).aps.alert.body].length, 240);
+  const privateBody = 'private conversation ' + '😀'.repeat(300);
+  const completed = notificationPayload({ kind: 'completed', body: privateBody }, registration);
+  assert.equal(completed.aps.alert.body, '打开 xbot 查看任务结果。');
+  const question = notificationPayload({ kind: 'question', body: privateBody }, registration);
+  assert.equal(question.aps.alert.body, '打开 xbot 查看并回答。');
+  assert.equal(JSON.stringify(completed).includes('private conversation'), false);
+  assert.equal(JSON.stringify(question).includes('private conversation'), false);
 });
 
 test('SSE framing handles BOM, chunked CRLF, comments and multiline data', () => {

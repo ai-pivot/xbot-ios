@@ -50,7 +50,7 @@ struct AskUserView: View {
                 }
             }
             .interactiveDismissDisabled(submitting)
-        }
+        }.privacyConsentSheet()
     }
     private func submit(cancelled: Bool) {
         submitting = true

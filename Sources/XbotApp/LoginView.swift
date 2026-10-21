@@ -10,6 +10,7 @@ struct LoginView: View {
     @State private var checking = false
     @State private var error: String?
     @State private var hint: String?
+    @State private var privacyAccepted = false
     @FocusState private var focusedField: Field?
     private var testing: Bool {
         #if DEBUG
@@ -40,7 +41,7 @@ struct LoginView: View {
                                 .focused($focusedField, equals: .server)
                                 .keyboardType(.URL).textContentType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                                 .accessibilityIdentifier("server-field")
-                                .onChange(of: store.server) { _, _ in bootstrap = false; checkedServer = ""; hint = nil }
+                                .onChange(of: store.server) { _, _ in bootstrap = false; checkedServer = ""; hint = nil; privacyAccepted = false }
                             Divider()
                             Button { Task { await probe() } } label: {
                                 HStack { Text("检查服务器"); Spacer(); if checking { ProgressView() } else { Image(systemName: "arrow.up.right") } }
@@ -49,6 +50,8 @@ struct LoginView: View {
                         labeledField("用户名") { TextField("你的用户名", text: $store.username).textContentType(testing ? .none : .username).focused($focusedField, equals: .username).accessibilityIdentifier("username-field") }
                         labeledField("密码") { SecureField("输入密码", text: $password).textContentType(testing ? .none : bootstrap ? .newPassword : .password).focused($focusedField, equals: .password).accessibilityIdentifier("password-field") }
                         Toggle("安全记住登录信息", isOn: $remember).font(.subheadline)
+                        NavigationLink("隐私说明与数据去向") { PrivacyPolicyView() }.font(.subheadline)
+                        Toggle("我已阅读隐私说明，同意将登录信息发送至我指定的服务器", isOn: $privacyAccepted).font(.footnote).accessibilityIdentifier("login-privacy-toggle")
                         if let hint { Text(hint).font(.footnote).foregroundStyle(Theme.accent) }
                         if let error = error ?? store.error { ErrorBanner(text: error) { self.error = nil; store.error = nil } }
                         Button {
@@ -69,6 +72,7 @@ struct LoginView: View {
                 }.padding(24).frame(maxWidth: 560)
                     .frame(maxWidth: .infinity)
             }.background(Theme.canvas).scrollDismissesKeyboard(.interactively)
+                .toolbar { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("完成") { focusedField = nil }.accessibilityIdentifier("dismiss-login-keyboard") } }
         }
     }
 
@@ -88,6 +92,7 @@ struct LoginView: View {
     private func submit() async {
         focusedField = nil
         guard !store.username.trimmingCharacters(in: .whitespaces).isEmpty, !password.isEmpty else { error = "请填写用户名和密码"; return }
+        guard privacyAccepted else { error = "请先阅读隐私说明并确认登录信息的接收服务器"; return }
         loading = true; defer { loading = false }; error = nil
         do {
             // Discover bootstrap even if the user skipped the check button.

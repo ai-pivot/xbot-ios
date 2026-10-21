@@ -28,9 +28,10 @@ struct SettingsView: View {
                     TextField("https://对象存储域名", text: $mediaBase).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled().accessibilityIdentifier("media-base-field")
                     if let mediaError { Text(mediaError).font(.caption).foregroundStyle(.red) }
                 } header: { Text("媒体 / 对象存储地址") } footer: { Text("将消息中的 localhost / 127.0.0.1 图片链接重写到这里。留空时不请求这些本机链接。") }
-                .onChange(of: mediaBase) { _, value in mediaError = value.isEmpty || (try? ProtocolCodec.baseURL(value)) != nil ? nil : "请输入有效的 HTTP 或 HTTPS 地址" }
+                .onChange(of: mediaBase) { _, value in mediaError = value.isEmpty || (try? ProtocolCodec.baseURL(value)) != nil ? nil : "公网地址须使用 HTTPS；HTTP 仅限局域网" }
                 NavigationLink { NotificationSettingsView() } label: { Label("会话通知", systemImage: "bell") }.disabled(store.preview)
                 NavigationLink { UpdateSettingsView() } label: { Label("版本更新", systemImage: "arrow.down.circle") }
+                NavigationLink { PrivacySettingsView() } label: { Label("隐私与数据", systemImage: "hand.raised") }.accessibilityIdentifier("privacy-settings-link")
                 Section("关于") {
                     LabeledContent("版本", value: UpdateController.shared.installedVersion + " · iOS")
                     Link(destination: URL(string: "https://github.com/ai-pivot/xbot-android")!) { Label("参考项目 · xbot-android", systemImage: "arrow.up.right.square") }

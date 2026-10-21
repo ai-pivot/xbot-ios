@@ -15,6 +15,7 @@ pending_ask = None
 sessions = [{"chat_id": "fixture", "channel": "web", "label": "协议联调", "preview": "本地测试服务器"}]
 settings = {"get_user_thinking_mode": "", "get_context_mode": "phase1", "get_user_max_output_tokens": 4096, "get_user_max_context": 32768, "get_llm_concurrency": 2}
 compression = 0.8
+mobile_requests = {"messages": 0, "uploads": 0, "reports": 0, "deletions": 0}
 rich_text = """## 完整内容验收
 
 | 项目 | 状态 |
@@ -53,9 +54,12 @@ class Handler(BaseHTTPRequestHandler):
         raw = self.rfile.read(int(self.headers.get("Content-Length", 0)))
         body = json.loads(raw or b"{}") if "multipart" not in self.headers.get("Content-Type", "") else {}
         if path == "/api/auth/config": return self.send_json({"bootstrap": False})
+        if path == "/api/mobile/policy": return self.send_json({}, 404)  # Exercise an unmodified self-hosted server.
+        if path == "/__test/counts": return self.send_json(mobile_requests)
         if path == "/__test/reset":
             with lock:
                 events.clear(); history.clear(); turn = 0; pending_ask = None
+                for key in mobile_requests: mobile_requests[key] = 0
                 lock.notify_all()
             return self.send_json({})
         if path == "/__test/notice":
@@ -65,9 +69,21 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(None, 401)
         if not self.authorized(): return self.send_json(None, 401)
         if path == "/api/auth/logout": return self.send_json({})
+        if path == "/api/mobile/account-deletion":
+            if body.get("username") != "tester" or body.get("password") != "fixture-password": return self.send_json({}, 401)
+            mobile_requests["deletions"] += 1
+            return self.send_json({"id": "d" * 64, "status": "pending", "deadline": "2026-11-01T00:00:00Z"})
+        if path == "/api/mobile/status": return self.send_json({"id": body.get("id"), "status": "pending", "deadline": "2026-11-01T00:00:00Z"})
+        if path == "/api/mobile/reports":
+            mobile_requests["reports"] += 1
+            return self.send_json({"id": "f" * 64, "status": "received"})
+        if path == "/api/files/upload":
+            mobile_requests["uploads"] += 1
+            return self.send_json({"upload_key": "fixture-upload", "name": "fixture.png", "size": len(raw), "mime": "image/png"})
         if path == "/api/session-tree": return self.send_json({"sessions": sessions})
         if path == "/api/history": return self.send_json({"messages": history, "last_seq": len(events), "processing": False, "active_progress": {"phase": "done"}})
         if path == "/api/message":
+            mobile_requests["messages"] += 1
             turn += 1; tid = turn; text = body.get("content", "")
             history.append({"turn_id": tid, "history_id": tid * 10, "role": "user", "content": text})
             if text == "need-input":

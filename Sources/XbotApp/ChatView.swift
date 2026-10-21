@@ -4,6 +4,10 @@ import UniformTypeIdentifiers
 
 struct ChatView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dismiss) private var dismiss
+    @State private var privacy = PrivacyCenter.shared
+    @State private var reporting = false
+    @State private var reportedTurn: ChatTurn?
     @State private var vm: ChatStore
     @State private var pickingFile = false
     @State private var photo: PhotosPickerItem?
@@ -56,6 +60,11 @@ struct ChatView: View {
                 Menu {
                     Button("重新同步", systemImage: "arrow.clockwise") { Task { vm.stop(); await vm.start() } }.disabled(vm.preview || vm.loading)
                     Button("回退历史", systemImage: "clock.arrow.circlepath") { showRewind = true }.disabled(vm.preview || vm.state.busy)
+                    Button("举报内容", systemImage: "flag") { reportedTurn = nil; reporting = true }.disabled(vm.preview)
+                    Button("AI 数据分享说明", systemImage: "hand.raised") { privacy.requestingConsent = true }.disabled(vm.preview)
+                    Button("屏蔽此会话", systemImage: "hand.raised") {
+                        do { try privacy.block(vm.chat) } catch { vm.error = error.localizedDescription }
+                    }.disabled(vm.preview)
                 } label: { Image(systemName: "ellipsis.circle") }.accessibilityLabel("会话操作")
             }
         }
@@ -69,6 +78,10 @@ struct ChatView: View {
         }
         .sheet(isPresented: $pickingModel) { modelPicker }
         .sheet(isPresented: $showRewind) { RewindPicker(vm: vm) }
+        .sheet(isPresented: $reporting) { ContentReportView(api: vm.api, chat: vm.chat, turn: reportedTurn) }
+        .onChange(of: privacy.blocked) { _, _ in if privacy.isBlocked(vm.chat) { vm.stop(); if !reporting { dismiss() } } }
+        .onChange(of: reporting) { _, value in if !value && privacy.isBlocked(vm.chat) { vm.stop(); dismiss() } }
+        .privacyConsentSheet(enabled: !showAsk && !pickingModel && !showRewind && !reporting)
         .fileImporter(isPresented: $pickingFile, allowedContentTypes: [.item]) { result in
             Task {
                 do {
@@ -139,7 +152,7 @@ struct ChatView: View {
     private func turnView(_ turn: ChatTurn) -> some View {
         VStack(alignment: .leading, spacing: 22) {
             if !turn.user.isEmpty {
-                HStack { Spacer(minLength: 32); Text(turn.user).textSelection(.enabled).padding(15)
+                HStack { Spacer(minLength: 32); Text(ContentSafety.shouldHide(turn.user) ? "内容已因安全限制隐藏" : turn.user).textSelection(.enabled).padding(15)
                     .background(Theme.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 20)) }
             }
             VStack(alignment: .leading, spacing: 16) {
@@ -161,6 +174,7 @@ struct ChatView: View {
         }
         .contextMenu {
             Button("复制", systemImage: "doc.on.doc") { UIPasteboard.general.string = turn.final.nonEmpty ?? turn.iterations.map(\.content).joined(separator: "\n\n") }
+            if !vm.preview { Button("举报这条内容", systemImage: "flag") { reportedTurn = turn; reporting = true } }
             if !vm.preview && turn.historyID > 0 && !vm.state.busy { Button("回退到这里", systemImage: "clock.arrow.circlepath", role: .destructive) { rewindTurn = turn } }
         }
     }

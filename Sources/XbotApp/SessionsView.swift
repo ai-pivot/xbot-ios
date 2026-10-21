@@ -10,10 +10,11 @@ struct SessionsView: View {
     @State private var deleting: ChatSession?
     @State private var working = false
     @State private var localError: String?
+    @State private var privacy = PrivacyCenter.shared
 
     private var filtered: [ChatSession] {
         func matches(_ chat: ChatSession) -> Bool { search.isEmpty || chat.title.localizedCaseInsensitiveContains(search) || chat.preview.localizedCaseInsensitiveContains(search) }
-        return store.sessions.filter { matches($0) || $0.children.contains(where: matches) }
+        return store.sessions.filter { !privacy.isBlocked($0) && (matches($0) || $0.children.contains(where: { !privacy.isBlocked($0) && matches($0) })) }
     }
     var body: some View {
         NavigationStack(path: $path) {
@@ -44,7 +45,7 @@ struct SessionsView: View {
                     }
                     ForEach(filtered) { chat in
                         sessionRow(chat)
-                        ForEach(chat.children) { child in sessionRow(child, nested: true) }
+                        ForEach(chat.children.filter { !privacy.isBlocked($0) }) { child in sessionRow(child, nested: true) }
                     }
                 } header: { Text("最近会话") }
             }
@@ -87,7 +88,7 @@ struct SessionsView: View {
                     .frame(width: 36, height: 36).background(Theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 11))
                 VStack(alignment: .leading, spacing: 6) {
                     HStack { Text(chat.title).font(.headline).lineLimit(1); if chat.running { Circle().fill(Theme.accent).frame(width: 7, height: 7) } else if chat.status == "error" { Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.red).accessibilityLabel("会话执行失败") } }
-                    Text(chat.preview.nonEmpty ?? "随时继续这段对话").font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                    Text(ContentSafety.shouldHide(chat.preview) ? "内容已因安全限制隐藏" : chat.preview.nonEmpty ?? "随时继续这段对话").font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
                     HStack {
                         if chat.channel != "web" { Text(chat.channel).font(.caption2.monospaced()) }
                         if !chat.lastActive.isEmpty { Text(relativeTime(chat.lastActive)).font(.caption2) }
@@ -107,6 +108,7 @@ struct SessionsView: View {
             Button("重命名", systemImage: "pencil") { label = chat.title; edit = .rename(chat) }
             Button("创建分支", systemImage: "arrow.triangle.branch") { label = chat.title + " · 分支"; edit = .fork(chat) }
             Button("删除会话", systemImage: "trash", role: .destructive) { deleting = chat }
+            Button("屏蔽此会话", systemImage: "hand.raised") { do { try privacy.block(chat) } catch { localError = error.localizedDescription } }
         }
     }
     private func relativeTime(_ raw: String) -> String {

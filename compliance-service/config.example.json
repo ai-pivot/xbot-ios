@@ -1,0 +1,6 @@
+{
+  "upstream": "http://127.0.0.1:16000",
+  "stateDirectory": "/private/xbot-mobile-requests",
+  "deletionDays": 7,
+  "port": 18883
+}

@@ -135,6 +135,7 @@ final class ChatStore {
     func send() async {
         guard let api, !preview, !sending, !uploading, !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !attachments.isEmpty else { return }
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines), files = attachments
+        guard !ContentSafety.shouldHide(text) else { error = "该内容涉及安全限制，无法发送。你可以通过会话菜单反馈问题。"; return }
         sending = true; defer { sending = false }
         do {
             var body = api.context(chat)

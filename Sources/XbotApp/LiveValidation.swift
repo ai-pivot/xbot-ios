@@ -15,14 +15,21 @@ enum LiveValidation {
         func mark(_ name: String) { current = name; store.validationStatus = "真实接口验证中 · " + name }
         func require(_ condition: Bool) throws { if !condition { throw ServerError("Native validation assertion failed") } }
         var passed = false, failureKind = ""
+        var configuredPrivacy = false
         NotificationController.shared.disable()
         do {
             let data = try Data(contentsOf: input)
             try FileManager.default.removeItem(at: input)
             let config = try JSONDecoder().decode(JSONValue.self, from: data)
+            try require(config["consent_to_ai_sharing"].bool)
             let client = try XbotAPI(server: config["server"].string); api = client
             mark("login")
             try await client.login(username: config["username"].string, password: config["password"].string, remember: true)
+            await PrivacyCenter.shared.configure(api: client, username: "native-validation")
+            configuredPrivacy = true
+            PrivacyCenter.shared.localModelsOnly = config["local_models_only"].bool
+            PrivacyCenter.shared.additionalRecipients = config["ai_recipients"].string
+            try PrivacyCenter.shared.accept()
             _ = try await client.post("/api/session-tree"); steps.append(current)
             mark("401_relogin")
             _ = try await client.post("/api/auth/logout", retry: false)
@@ -113,6 +120,7 @@ enum LiveValidation {
             await api.logout()
         }
         NotificationController.shared.disable()
+        if configuredPrivacy { PrivacyCenter.shared.forgetAccount() }
         try? FileManager.default.removeItem(at: input)
         let report: [String: JSONValue] = ["passed": .bool(passed), "steps": .array(steps.map(JSONValue.string)), "last_step": .string(current), "failure_kind": .string(failureKind), "cleanup_attempted": .bool(true)]
         try? JSONEncoder().encode(JSONValue.object(report)).write(to: reportURL, options: .atomic)

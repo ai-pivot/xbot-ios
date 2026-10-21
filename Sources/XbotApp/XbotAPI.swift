@@ -7,6 +7,15 @@ private final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate, Sendab
     }
 }
 
+private final class MediaRedirectDelegate: NSObject, URLSessionTaskDelegate, Sendable {
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
+        guard let url = request.url, (try? TransportSecurity.validate(url)) != nil else { completionHandler(nil); return }
+        var safe = request; safe.setValue(nil, forHTTPHeaderField: "Cookie"); safe.setValue(nil, forHTTPHeaderField: "Authorization")
+        completionHandler(safe)
+    }
+}
+
 @MainActor
 final class XbotAPI {
     let baseURL: URL
@@ -48,6 +57,13 @@ final class XbotAPI {
     }
 
     func execute(_ request: URLRequest, retry: Bool = true) async throws -> JSONValue {
+        if let url = request.url {
+            try TransportSecurity.validate(url)
+            let protected = ["/api/message", "/api/files/upload", "/api/ask_user/respond"]
+            let body = request.httpBody.flatMap { try? JSONDecoder().decode(JSONValue.self, from: $0) }
+            let cancellationOnly = url.path == baseURL.path + "/api/ask_user/respond" && body?["cancelled"].bool == true && body?["answers"].object.isEmpty == true
+            if !cancellationOnly && protected.contains(where: { url.path == baseURL.path + $0 }) { try await PrivacyCenter.shared.requireConsent(for: self) }
+        }
         do {
             let (data, response) = try await session.data(for: request)
             guard let response = response as? HTTPURLResponse else { throw ServerError("服务器响应无效") }
@@ -115,20 +131,30 @@ final class XbotAPI {
     }
     func context(_ chat: ChatSession) -> [String: JSONValue] { ["chat_id": .string(chat.chatID), "channel": .string(chat.channel)] }
     func mediaData(_ url: URL, retry: Bool = true) async throws -> Data {
+        try TransportSecurity.validate(url)
         let sameOrigin = url.host == baseURL.host && url.scheme == baseURL.scheme && url.port == baseURL.port
-        let (data, response) = try await (sameOrigin ? session : URLSession.shared).data(from: url)
+        let (data, response) = try await (sameOrigin ? session.data(from: url) : externalMedia(url))
         guard let http = response as? HTTPURLResponse else { throw ServerError("图片响应无效") }
         if http.statusCode == 401 && sameOrigin && retry { try await silentLogin(); return try await mediaData(url, retry: false) }
         if sameOrigin && (300..<400).contains(http.statusCode),
            let location = http.value(forHTTPHeaderField: "Location"), let target = URL(string: location, relativeTo: url)?.absoluteURL,
            ["http", "https"].contains(target.scheme ?? ""), target.user == nil, target.password == nil {
             // Object-store redirects must never inherit the xbot session cookies.
-            let (redirected, result) = try await URLSession.shared.data(from: target)
+            try TransportSecurity.validate(target)
+            let (redirected, result) = try await externalMedia(target)
             guard (result as? HTTPURLResponse)?.statusCode == 200 else { throw ServerError("对象存储图片加载失败") }
             return redirected
         }
         guard http.statusCode == 200 else { throw ServerError("图片加载失败（HTTP \(http.statusCode)）") }
         return data
+    }
+    private func externalMedia(_ url: URL) async throws -> (Data, URLResponse) {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpShouldSetCookies = false; configuration.httpCookieStorage = nil
+        configuration.timeoutIntervalForRequest = 30
+        let external = URLSession(configuration: configuration, delegate: MediaRedirectDelegate(), delegateQueue: nil)
+        defer { external.invalidateAndCancel() }
+        return try await external.data(from: url)
     }
     func chatPath(_ chat: ChatSession, action: String) -> String {
         var allowed = CharacterSet.urlPathAllowed; allowed.remove(charactersIn: "/?#%")

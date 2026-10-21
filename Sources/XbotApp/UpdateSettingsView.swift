@@ -28,6 +28,7 @@ final class UpdateController {
         checking = true; defer { checking = false }; error = nil; message = nil
         do {
             guard let url = URL(string: raw), ["https", "http"].contains(url.scheme ?? ""), url.host != nil, url.user == nil, url.password == nil else { throw ServerError("更新清单地址无效") }
+            try TransportSecurity.validate(url)
             let configuration = URLSessionConfiguration.ephemeral; configuration.timeoutIntervalForRequest = 20
             let session = URLSession(configuration: configuration); defer { session.invalidateAndCancel() }
             let (data, response) = try await session.data(from: url)

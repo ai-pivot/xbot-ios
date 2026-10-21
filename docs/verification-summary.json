@@ -1,8 +1,8 @@
 {
-  "verified_at": "2026-10-21T04:08:37.264959+00:00",
+  "verified_at": "2026-10-21T08:38:14.658472+00:00",
   "android_reference": "761ec91893cedf94329c1e9de87d0743942c0692",
   "core_tests": {
-    "passed": 35,
+    "passed": 42,
     "failed": 0
   },
   "relay_tests": {
@@ -10,15 +10,36 @@
     "failed": 0
   },
   "ui_flows": {
-    "passed": 5,
+    "passed": 8,
     "failed": 0,
     "skipped": 0
   },
-  "settings_update_retest": "passed",
+  "settings_update_retest": "passed_in_current_ui_suite",
   "native_live_steps": 10,
   "native_live_passed": true,
   "simulator_debug_build": "passed",
   "iphoneos_release_unsigned_build": "passed",
   "apns": "unconfigured_not_sent",
-  "testflight_appstore": "not_published"
+  "testflight_appstore": "not_published",
+  "compliance_service_tests": {
+    "passed": 7,
+    "failed": 0
+  },
+  "native_live_baseline_commit": "a86d4ce1454f5557cbfd93de6a1cae8199b61a47",
+  "native_live_current_revision": "not_rerun_after_privacy_changes",
+  "privacy_package_checks": {
+    "simulator_debug": "passed",
+    "iphoneos_release_unsigned": "passed"
+  },
+  "compliance_service_deployment": "not_deployed",
+  "real_account_deletion": "not_performed",
+  "content_safety": "baseline_client_text_filter_only_server_moderation_not_audited",
+  "ui_result_bundle": {
+    "result": "Passed",
+    "passed": 8,
+    "failed": 0,
+    "skipped": 0,
+    "xcodebuild_exit": 0
+  },
+  "simulator_diagnostics_collection": "stopped_after_completed_suite_to_unblock_xcode_report_finalization"
 }

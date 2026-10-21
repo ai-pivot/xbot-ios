@@ -6,6 +6,9 @@ struct ToolCard: View {
     private var running: Bool { ["running", "pending", "streaming", ""].contains(tool.status) }
     private var failed: Bool { ["error", "failed"].contains(tool.status) }
     var body: some View {
+        if ContentSafety.shouldHide(tool.args + "\n" + tool.output) {
+            Label("工具内容已因安全限制隐藏，可通过消息菜单举报", systemImage: "hand.raised").font(.footnote).foregroundStyle(.secondary)
+        } else {
         DisclosureGroup {
             VStack(alignment: .leading, spacing: 12) {
                 if !tool.args.isEmpty {
@@ -32,6 +35,7 @@ struct ToolCard: View {
                 if tool.elapsed > 0 { Text(String(format: "%.1fs", Double(tool.elapsed) / 1000)).font(.caption2.monospacedDigit()).foregroundStyle(.tertiary) }
             }
         }.padding(14).background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+        }
     }
 }
 
@@ -40,6 +44,9 @@ struct MarkdownText: View {
     let text: String
     var api: XbotAPI?
     var body: some View {
+        if ContentSafety.shouldHide(text) {
+            Label("内容已因安全限制隐藏，可通过消息菜单举报", systemImage: "hand.raised").font(.footnote).foregroundStyle(.secondary)
+        } else {
         VStack(alignment: .leading, spacing: 12) {
             ForEach(Array(MarkdownParser.parse(text).enumerated()), id: \.offset) { _, block in
                 switch block {
@@ -60,6 +67,7 @@ struct MarkdownText: View {
             .environment(\.openURL, OpenURLAction { url in
                 ["https", "http", "mailto"].contains(url.scheme?.lowercased() ?? "") ? .systemAction : .discarded
             })
+        }
     }
     private func inline(_ value: String) -> some View {
         Text(attributed(value))

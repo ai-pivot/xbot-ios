@@ -16,3 +16,6 @@ push-relay/devices.json
 push-relay/*.tmp
 .env
 .env.*
+compliance-service/config.json
+compliance-service/state/
+compliance-service/*.tmp

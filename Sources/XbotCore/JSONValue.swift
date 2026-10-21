@@ -65,13 +65,18 @@ public enum ProtocolCodec {
     public static func baseURL(_ raw: String) throws -> URL {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw ServerError("请填写服务器地址") }
-        if !text.contains("://") { text = "http://" + text }
+        if !text.contains("://") {
+            let candidate = URL(string: "http://" + text)
+            text = (candidate?.host.map(TransportSecurity.isLocalHost) == true ? "http://" : "https://") + text
+        }
         guard var c = URLComponents(string: text), ["http", "https"].contains(c.scheme?.lowercased() ?? ""),
               c.host?.isEmpty == false, c.user == nil, c.password == nil, c.query == nil, c.fragment == nil else {
             throw ServerError("请输入有效的 HTTP 或 HTTPS 服务器地址")
         }
         while c.path.hasSuffix("/") { c.path.removeLast() }
-        guard let url = c.url else { throw ServerError("服务器地址无效") }; return url
+        guard let url = c.url else { throw ServerError("服务器地址无效") }
+        try TransportSecurity.validate(url)
+        return url
     }
 }
 

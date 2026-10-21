@@ -31,12 +31,16 @@ final class AppStore {
         }
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("--reset-auth"), let client = try? XbotAPI(server: server) {
+            await PrivacyCenter.shared.configure(api: client, username: username); PrivacyCenter.shared.forgetAccount()
             client.clearLocalAuthentication(); username = ""; NotificationController.shared.disable(); return
         }
         #endif
         guard !server.isEmpty else { return }
         do {
-            let client = try XbotAPI(server: server); api = client; try await refreshThrowing(); authenticated = true
+            let client = try XbotAPI(server: server)
+            guard SecureStore.read("login-privacy-v1:" + client.baseURL.absoluteString + ":" + username) == Data("accepted".utf8) else { return }
+            api = client; try await refreshThrowing()
+            await PrivacyCenter.shared.configure(api: client, username: username); authenticated = true
             if let active = ClientPreferences.active(server: client.baseURL) { NotificationController.shared.attach(api: client, chat: active) }
         }
         catch { if !(error is CancellationError) { self.error = error.localizedDescription } }
@@ -44,10 +48,13 @@ final class AppStore {
 
     func login(password: String, remember: Bool, register: Bool) async throws {
         let client = try XbotAPI(server: server)
-        try await client.login(username: username.trimmingCharacters(in: .whitespaces), password: password, remember: remember, register: register)
+        username = username.trimmingCharacters(in: .whitespaces)
+        try SecureStore.write(Data("accepted".utf8), account: "login-privacy-v1:" + client.baseURL.absoluteString + ":" + username)
+        try await client.login(username: username, password: password, remember: remember, register: register)
         // Retain the authenticated client even when the first session-list fetch fails.
         api = client; sessions = []; server = client.baseURL.absoluteString
         UserDefaults.standard.set(server, forKey: "serverURL"); UserDefaults.standard.set(username, forKey: "username")
+        await PrivacyCenter.shared.configure(api: client, username: username)
         authenticated = true; preview = false; error = nil
         await refresh()
     }
@@ -100,7 +107,20 @@ final class AppStore {
         NotificationController.shared.disable()
         if let api { ClientPreferences.clearActive(server: api.baseURL) }
         if let api { await api.logout() }
+        PrivacyCenter.shared.disconnect()
         api = nil; authenticated = false; preview = false; sessions = []; error = nil; notifiedSession = nil; selectedTab = 0
+    }
+    func forgetAccount() async {
+        if let api {
+            let origin = api.baseURL.absoluteString
+            SecureStore.delete("login-privacy-v1:" + origin + ":" + username)
+            for key in UserDefaults.standard.dictionaryRepresentation().keys where key == "active:" + origin || key.hasPrefix("notice:" + origin + ":") {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+        PrivacyCenter.shared.forgetAccount()
+        await logout()
+        UserDefaults.standard.removeObject(forKey: "username"); username = ""
     }
     func enterPreview() {
         api = nil; preview = true; authenticated = true; error = nil
@@ -108,7 +128,8 @@ final class AppStore {
     }
     func routeNotification(_ info: [AnyHashable: Any]?) {
         guard let id = info?["chat_id"] as? String, !id.isEmpty,
-              let origin = info?["server"] as? String, origin == server else { return }
+              let origin = info?["server"] as? String, origin == server,
+              PrivacyCenter.shared.blocked[(info?["channel"] as? String ?? "web") + ":" + id] == nil else { return }
         notifiedSession = ChatSession(.object(["chat_id": .string(id), "channel": .string(info?["channel"] as? String ?? "web"), "label": .string("会话")]))
         selectedTab = 0
     }
